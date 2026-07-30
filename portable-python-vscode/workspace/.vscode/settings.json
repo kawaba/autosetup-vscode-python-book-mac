@@ -1,0 +1,87 @@
+{
+  // Python 実行環境（環境変数から取得）
+  "python.defaultInterpreterPath": "${env:PORTABLE_PYTHON_PATH}",
+
+  // 外観
+  "workbench.colorTheme": "Default Light+",
+  "workbench.startupEditor": "none",
+  "workbench.editor.empty.hint": "hidden",
+  "workbench.secondarySideBar.defaultVisibility": "visible",
+
+  // エディタ
+  "files.autoSave": "afterDelay",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-python.black-formatter",
+  "editor.tabSize": 4,
+  "editor.insertSpaces": true,
+  "editor.renderWhitespace": "boundary",
+
+  // 隠しファイル
+  "files.exclude": {
+    "**/.vscode": true
+  },
+
+  // ターミナル
+  "terminal.integrated.env.windows": {
+    "PYTHONIOENCODING": "utf-8"
+  },
+  "terminal.integrated.fontFamily": "Consolas, 'MS Gothic'",
+  "terminal.integrated.scrollback": 20000,
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.confirmOnExit": "never",
+  
+  // Jupyter
+  "notebook.output.scrolling": true,
+  "notebook.cellToolbarVisibility": "hover",
+  "jupyter.kernels.excludePythonEnvironments": [],
+  "jupyter.askForKernelRestart": false,
+  "jupyter.jupyterServerType": "local",
+  "jupyter.interactiveWindow.creationMode": "single",
+
+  // Python関連
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": [],
+  "python.useEnvironmentsExtension": true,
+
+  "python.languageServer": "Pylance",
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.extraPaths": ["${workspaceFolder}"],
+
+  "python.terminal.executeInFileDir": true,
+  "python.createEnvironment.trigger": "off",
+  "python.testing.pytestEnabled": false,
+
+  // GitHub Copilot
+  "github.copilot.enable": {
+    "*": true
+  },
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.editor.enableAutoCompletions": true,
+  "github.copilot.inlineSuggest.enable": true,
+
+  // Copilot Chat タブを自動表示しない
+  "github.copilot.chat.autoShow": false,
+
+  // 初回ガイドやWalkthroughの自動表示も抑止
+  "workbench.welcomePage.walkthroughs.openOnInstall": false,
+  "workbench.welcomePage.walkthroughs.openOnStartup": false,
+  "workbench.welcomePage.experimental.startPageEnabled": false,
+
+  // 更新と通信
+  // (update.mode / extensions.autoUpdate 等は User 設定でのみ有効なため、
+  //  ワークスペース設定からは削除。config/settings.json 側で設定済み)
+  "extensions.ignoreRecommendations": true,
+
+  // 複数ファイルを開く
+  "workbench.editor.enablePreview": false,
+  "workbench.editor.enablePreviewFromQuickOpen": false,
+
+  // 学習環境を安定化
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmDelete": false,
+  "window.title": "${activeEditorShort}${separator}${rootName}",
+  "breadcrumbs.enabled": true,
+  "workbench.hover.delay": 10000
+  
+}

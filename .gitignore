@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# setup.command 実行後に生成される、配布に含めないフォルダ
+portable-python-vscode/python/
+portable-python-vscode/vscode/
