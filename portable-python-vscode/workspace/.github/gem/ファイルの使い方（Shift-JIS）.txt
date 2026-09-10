@@ -1,0 +1,7 @@
+Gemin GemでSPDからPythonソースコードを生成できるようにします。
+次のようにしてください。
+
+・gem-SPD-instructions.md
+　エディターで開いて、Gemの「カスタム指示」に全内容をコピーする
+・spd-pattern-python-code.md
+　Gemの「知識」にファイルアップロードする
