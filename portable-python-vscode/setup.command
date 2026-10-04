@@ -334,6 +334,49 @@ done
 echo ""
 
 # ============================================================
+# 8. 起動用アプリ (launch-vscode.app) の作成
+# ============================================================
+# launch-vscode.command はダブルクリックするとターミナルが開き、起動後もウインドウが残る。
+# AppleScript で作ったアプリから launch-vscode.command を呼べば、ターミナルは開かない。
+# このアプリはこの Mac の上で作るので「インターネットから取得した」印が付かず、
+# Gatekeeper の警告も出ない。作れなかった場合は launch-vscode.command を使えばよい。
+echo -e "${GREEN}起動用アプリ (launch-vscode.app) を作成中...${NC}"
+
+LAUNCHER_APP="$SCRIPT_DIR/launch-vscode.app"
+
+# set -e は「if ! 関数」の中では効かないので、失敗は 1 つずつ return 1 で返す
+create_launcher_app() {
+    local icon="$VSCODE_DIR/Visual Studio Code.app/Contents/Resources/Code.icns"
+
+    rm -rf "$LAUNCHER_APP" || return 1
+    # path to me はアプリ自身の場所。フォルダを移動しても、隣の launch-vscode.command を呼べる。
+    # launch-vscode.command が失敗すると、標準エラーの内容がダイアログで表示される。
+    osacompile -o "$LAUNCHER_APP" \
+        -e 'on run' \
+        -e '    set rootDir to do shell script "dirname " & quoted form of (POSIX path of (path to me))' \
+        -e '    do shell script "/bin/bash " & quoted form of (rootDir & "/launch-vscode.command")' \
+        -e 'end run' || return 1
+
+    # アイコンを VS Code のものにする (失敗しても起動には影響しないので続ける)。
+    # アプリの中身を変えると署名が合わなくなるため、署名し直す。
+    if [ -f "$icon" ]; then
+        cp "$icon" "$LAUNCHER_APP/Contents/Resources/applet.icns" \
+            && codesign --force --sign - "$LAUNCHER_APP" >/dev/null 2>&1 \
+            && touch "$LAUNCHER_APP" \
+            || echo -e "  ${YELLOW}警告: アイコンを設定できませんでした${NC}"
+    fi
+}
+
+if create_launcher_app; then
+    echo -e "  ${GREEN}launch-vscode.app の作成完了${NC}"
+else
+    rm -rf "$LAUNCHER_APP"
+    echo -e "  ${YELLOW}警告: launch-vscode.app を作成できませんでした。launch-vscode.command で起動してください${NC}"
+fi
+
+echo ""
+
+# ============================================================
 # 完了メッセージ
 # ============================================================
 echo -e "${CYAN}============================================================${NC}"
@@ -341,14 +384,17 @@ echo -e "${CYAN} セットアップが完了しました！${NC}"
 echo -e "${CYAN}============================================================${NC}"
 echo ""
 echo -e "${WHITE}次の手順で起動してください:${NC}"
-echo -e "  ${YELLOW}1. launch-vscode.command をダブルクリック${NC}"
-echo -e "  ${YELLOW}2. VS Code が起動します${NC}"
+if [ -d "$LAUNCHER_APP" ]; then
+    echo -e "  ${YELLOW}1. launch-vscode.app をダブルクリック${NC}"
+else
+    echo -e "  ${YELLOW}1. launch-vscode.command をダブルクリック${NC}"
+fi
+echo -e "  ${YELLOW}2. VS Code が workspace フォルダを開いた状態で起動します${NC}"
 echo ""
-echo -e "${WHITE}⚠️  初回起動時だけ、もう一度開き直してください:${NC}"
-echo -e "  ${GRAY}初めて起動したときだけ、メニューなどが英語表示になることがあります。${NC}"
-echo -e "  ${GRAY}その場合は一度 VS Code をしっかり終了 (Cmd+Q) してから、${NC}"
-echo -e "  ${GRAY}もう一度 launch-vscode.command を開いてください。${NC}"
-echo -e "  ${GRAY}2回目からは日本語で表示されます。${NC}"
+echo -e "${WHITE}⚠️  最初のうちは、英語表示になることがあります:${NC}"
+echo -e "  ${GRAY}起動して間もないうちは、メニューなどが英語表示になることがあります。${NC}"
+echo -e "  ${GRAY}その場合は一度 VS Code をしっかり終了 (Cmd+Q) してから、もう一度起動してください。${NC}"
+echo -e "  ${GRAY}日本語になるまで、何回か繰り返す必要があることがあります。${NC}"
 echo ""
 echo -e "${WHITE}インストールされた環境:${NC}"
 echo -e "  ${GRAY}・Python 3.13 (自己完結型スタンドアロンビルド)${NC}"
