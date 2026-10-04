@@ -25,7 +25,9 @@
   "terminal.integrated.env.windows": {
     "PYTHONIOENCODING": "utf-8"
   },
-  "terminal.integrated.fontFamily": "Consolas, 'MS Gothic'",
+  // ターミナルは罫線を半角1マスとして扱うので、罫線が全角幅の HackGen は使わない
+  // (Menlo は macOS 標準の等幅フォント。日本語はヒラギノで補われる)
+  "terminal.integrated.fontFamily": "Menlo, monospace",
   "terminal.integrated.scrollback": 20000,
   "terminal.integrated.defaultProfile.windows": "Command Prompt",
   "terminal.integrated.confirmOnExit": "never",

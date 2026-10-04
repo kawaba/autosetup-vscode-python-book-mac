@@ -9,6 +9,10 @@
   "workbench.secondarySideBar.defaultVisibility": "visible",
 
   // エディタ
+  // SPD の罫線 (─│├└┬) を全角幅で表示して縦罫線をそろえるため、HackGen を使う
+  // (setup.command が ~/Library/Fonts にインストールする)。
+  // HackGen が無い場合は Osaka−等幅、それも無ければ Menlo で表示する (Menlo では縦罫線がずれる)。
+  "editor.fontFamily": "HackGen, 'Osaka-Mono', Menlo, monospace",
   "files.autoSave": "afterDelay",
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "ms-python.black-formatter",
@@ -25,7 +29,10 @@
   "terminal.integrated.env.windows": {
     "PYTHONIOENCODING": "utf-8"
   },
-  "terminal.integrated.fontFamily": "Consolas, 'MS Gothic'",
+  // ターミナルは罫線を半角1マスとして扱うので、罫線が全角幅の HackGen は使わない
+  // (指定しないと editor.fontFamily の HackGen が使われ、表示が崩れる)。
+  // Menlo は macOS 標準の等幅フォント。日本語はヒラギノで補われる。
+  "terminal.integrated.fontFamily": "Menlo, monospace",
   "terminal.integrated.scrollback": 20000,
   "terminal.integrated.defaultProfile.windows": "Command Prompt",
   "terminal.integrated.confirmOnExit": "never",

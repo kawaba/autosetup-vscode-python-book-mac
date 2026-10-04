@@ -1,0 +1,4 @@
+# Mac で実行するスクリプトは、Windows で作業しても常に LF 改行にする
+# (CRLF だと「bad interpreter: /bin/bash^M」で実行できない)
+*.command text eol=lf
+*.sh text eol=lf

@@ -14,9 +14,24 @@ GRAY='\033[0;37m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
+# 途中で止まったときに、どこで止まったかを表示してからウィンドウを残す
+on_error() {
+    echo ""
+    echo -e "${RED}エラーが発生したため、セットアップを中止しました (setup.command の $1 行目)。${NC}"
+    echo -e "${RED}上に表示されているメッセージを確認してください。${NC}"
+    echo "Press any key to exit..."
+    read -n 1 -s
+}
+trap 'on_error $LINENO' ERR
+
 # スクリプト自身のディレクトリを基準にする
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# zip を展開したファイルに付く「インターネットから取得した」印 (com.apple.quarantine) を
+# フォルダ全体から外す。これで launch-vscode.command を初めて開くときに
+# Gatekeeper の警告が出なくなる (setup.command 自身の初回の警告は避けられない)。
+xattr -dr com.apple.quarantine "$SCRIPT_DIR" 2>/dev/null || true
 
 echo -e "${CYAN}============================================================${NC}"
 echo -e "${CYAN} Portable Python + VS Code 環境セットアップ開始${NC}"
@@ -81,23 +96,53 @@ echo ""
 # ============================================================
 # 1b. フォント (HackGen) のインストール
 # ============================================================
-# フォントはOS全体 (~/Library/Fonts) へのインストールとなり、Pythonの
-# ポータブル性とは無関係な副次的なステップ。ここだけ Homebrew を使う。
+# SPD の罫線 (─│├└┬) を全角幅で表示して、縦罫線の位置をそろえるために使う。
+# HackGen (Console でない方) は罫線が全角幅。Mac 標準の等幅フォント (Menlo など) は
+# 罫線が半角幅なので、日本語と混ざると縦罫線がずれる。
+# Homebrew は管理者権限が必要で学校の Mac などでは使えないため、GitHub の配布 zip から
+# 直接取得し、管理者権限の要らない ~/Library/Fonts に置く。
+# フォントは OS 全体へのインストールとなり、Python のポータブル性とは無関係。
+# 失敗してもセットアップは続ける (VS Code は settings.json の代わりのフォントで表示する)。
 echo -e "${GREEN}フォント (HackGen) をセットアップ中...${NC}"
 
-if ! command -v brew &>/dev/null; then
-    echo -e "  ${YELLOW}Homebrew が見つかりません。インストール中...${NC}"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+HACKGEN_VERSION="v2.10.0"
+HACKGEN_FILES=("HackGen-Regular.ttf" "HackGen-Bold.ttf")
+USER_FONT_DIR="$HOME/Library/Fonts"
 
-    # Apple Silicon の場合、PATH を通す
-    if [ "$ARCH" = "arm64" ]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
+# set -e は「if ! 関数」の中では効かないので、失敗は 1 つずつ return 1 で返す
+install_hackgen() {
+    local f tmp zip_dir missing=0
+    for f in "${HACKGEN_FILES[@]}"; do
+        [ -f "$USER_FONT_DIR/$f" ] || missing=1
+    done
+    if [ "$missing" -eq 0 ]; then
+        echo -e "  ${YELLOW}★ HackGen は既にインストールされています。スキップします。${NC}"
+        return 0
     fi
-fi
 
-brew install --cask font-hackgen || {
-    echo -e "  ${YELLOW}警告: HackGen フォントのインストールをスキップしました${NC}"
+    tmp=$(mktemp -d) || return 1
+    zip_dir="HackGen_${HACKGEN_VERSION}"
+
+    echo "  HackGen ${HACKGEN_VERSION} をダウンロード中..."
+    curl -fL --retry 3 -o "$tmp/hackgen.zip" \
+        "https://github.com/yuru7/HackGen/releases/download/${HACKGEN_VERSION}/${zip_dir}.zip" \
+        || { rm -rf "$tmp"; return 1; }
+
+    mkdir -p "$USER_FONT_DIR" || { rm -rf "$tmp"; return 1; }
+    for f in "${HACKGEN_FILES[@]}"; do
+        # -j: zip 内のフォルダ (HackGen_v2.10.0/) を付けずに取り出す
+        unzip -q -o -j "$tmp/hackgen.zip" "$zip_dir/$f" -d "$tmp" \
+            && cp "$tmp/$f" "$USER_FONT_DIR/" \
+            || { rm -rf "$tmp"; return 1; }
+    done
+    rm -rf "$tmp"
+    echo -e "  ${GREEN}HackGen を $USER_FONT_DIR にインストールしました${NC}"
 }
+
+if ! install_hackgen; then
+    echo -e "  ${YELLOW}警告: HackGen フォントをインストールできませんでした${NC}"
+    echo -e "  ${YELLOW}  SPD の縦罫線がずれる場合は、README の「トラブルシューティング」を参照してください${NC}"
+fi
 
 echo ""
 
@@ -156,7 +201,7 @@ if [ -d "$VSCODE_DIR/Visual Studio Code.app" ]; then
     echo -e "  ${YELLOW}★ VS Code は既に存在します。スキップします。${NC}"
 else
     echo "  ダウンロード中 (サイズが大きいため時間がかかります)..."
-    curl -L --retry 3 -o "$VSCODE_ZIP" "$VSCODE_URL"
+    curl -fL --retry 3 -o "$VSCODE_ZIP" "$VSCODE_URL"
 
     echo "  展開中..."
     unzip -q "$VSCODE_ZIP" -d "$VSCODE_DIR"
