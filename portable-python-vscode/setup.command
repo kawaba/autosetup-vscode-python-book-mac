@@ -377,6 +377,79 @@ fi
 echo ""
 
 # ============================================================
+# 9. VS Code を一度だけ起動して、日本語表示の準備をする
+# ============================================================
+# VS Code は表示言語を起動した瞬間に決めるが、日本語の翻訳の一覧 (user-data/languagepacks.json)
+# は初めて起動したときに作られる。そのため、最初の起動は必ず英語表示になる。
+# ここで一度起動して一覧を作り、すぐに終了させておく。これで利用者の最初の起動から日本語になる。
+# 終了させるのはこのフォルダの VS Code だけ (実行ファイルのフルパスで探す)。
+# 失敗してもセットアップは続ける (最初の起動が英語になるだけ)。
+echo -e "${GREEN}VS Code の日本語表示を準備中...${NC}"
+
+VSCODE_APP="$VSCODE_DIR/Visual Studio Code.app"
+VSCODE_EXE="$VSCODE_APP/Contents/MacOS/Code"
+LANGPACKS_FILE="$VSCODE_DIR/data/user-data/languagepacks.json"
+
+# このフォルダの VS Code の (本体の) プロセス番号を表示する
+find_vscode_pids() {
+    local pid comm
+    ps -axo pid=,comm= | while read -r pid comm; do
+        [ "$comm" = "$VSCODE_EXE" ] && echo "$pid"
+    done
+}
+
+# set -e は「if ! 関数」の中では効かないので、失敗は 1 つずつ return 1 で返す
+prepare_japanese_ui() {
+    local i pids
+
+    if [ -s "$LANGPACKS_FILE" ]; then
+        echo -e "  ${YELLOW}★ 準備済みです。スキップします。${NC}"
+        return 0
+    fi
+    if [ -n "$(find_vscode_pids)" ]; then
+        echo -e "  ${YELLOW}★ VS Code が起動中のため、スキップします。${NC}"
+        return 0
+    fi
+    [ -d "$VSCODE_APP" ] || return 1
+
+    # -g: 前面に出さない、-j: ウインドウを隠して起動する
+    # (起動のしかたは launch-vscode.command と同じにする)
+    open -g -j -a "$VSCODE_APP" \
+        --env "VSCODE_PORTABLE=$VSCODE_DIR/data" \
+        --env "PORTABLE_PYTHON_PATH=$PYTHON_BIN" \
+        --env "PATH=$PYTHON_DIR/bin:$PATH" \
+        --args --locale=ja --disable-workspace-trust "$SCRIPT_DIR/workspace" || return 1
+
+    # languagepacks.json ができるまで待つ (最大 60 秒)
+    for i in $(seq 1 60); do
+        [ -s "$LANGPACKS_FILE" ] && break
+        sleep 1
+    done
+    # 起動直後の書き込みが終わるまで少し待つ
+    sleep 5
+
+    # 終了させる (SIGTERM)。15 秒たっても終わらなければ強制終了する
+    pids=$(find_vscode_pids)
+    [ -n "$pids" ] && kill $pids 2>/dev/null
+    for i in $(seq 1 15); do
+        [ -z "$(find_vscode_pids)" ] && break
+        sleep 1
+    done
+    pids=$(find_vscode_pids)
+    [ -n "$pids" ] && kill -9 $pids 2>/dev/null
+
+    [ -s "$LANGPACKS_FILE" ] || return 1
+}
+
+if prepare_japanese_ui; then
+    echo -e "  ${GREEN}日本語表示の準備が完了しました${NC}"
+else
+    echo -e "  ${YELLOW}警告: 日本語表示の準備ができませんでした (最初の起動が英語表示になることがあります)${NC}"
+fi
+
+echo ""
+
+# ============================================================
 # 完了メッセージ
 # ============================================================
 echo -e "${CYAN}============================================================${NC}"
@@ -391,10 +464,9 @@ else
 fi
 echo -e "  ${YELLOW}2. VS Code が workspace フォルダを開いた状態で起動します${NC}"
 echo ""
-echo -e "${WHITE}⚠️  最初のうちは、英語表示になることがあります:${NC}"
-echo -e "  ${GRAY}起動して間もないうちは、メニューなどが英語表示になることがあります。${NC}"
-echo -e "  ${GRAY}その場合は一度 VS Code をしっかり終了 (Cmd+Q) してから、もう一度起動してください。${NC}"
-echo -e "  ${GRAY}日本語になるまで、何回か繰り返す必要があることがあります。${NC}"
+echo -e "${WHITE}⚠️  VS Code を終了するときは Cmd+Q を押してください:${NC}"
+echo -e "  ${GRAY}Mac では、ウインドウを ✕ で閉じても VS Code は終了しません。${NC}"
+echo -e "  ${GRAY}メニューが英語表示のときは、Cmd+Q で終了してから、もう一度起動してください。${NC}"
 echo ""
 echo -e "${WHITE}インストールされた環境:${NC}"
 echo -e "  ${GRAY}・Python 3.13 (自己完結型スタンドアロンビルド)${NC}"
