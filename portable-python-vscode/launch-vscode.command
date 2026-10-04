@@ -2,7 +2,7 @@
 # ============================================================
 # VS Code 起動スクリプト (Mac版)
 # Python パスを環境変数に設定してから VS Code を起動します
-# (setup.command が作る launch-vscode.app からも、このスクリプトが呼ばれる)
+# (setup.command が作る VS Code Python.app からも、このスクリプトが呼ばれる)
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,7 +13,7 @@ VSCODE_DATA="$SCRIPT_DIR/vscode/data"
 WORKSPACE_DIR="$SCRIPT_DIR/workspace"
 
 # VS Code の存在確認
-# (launch-vscode.app から呼ばれたときは、標準エラーの内容がダイアログに表示される)
+# (VS Code Python.app から呼ばれたときは、標準エラーの内容がダイアログに表示される)
 if [ ! -d "$VSCODE_APP" ]; then
     echo "エラー: VS Code が見つかりません: $VSCODE_APP" >&2
     echo "先に setup.command を実行してください。" >&2

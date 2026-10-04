@@ -17,10 +17,10 @@ Windows 版に載せている。
 ## 構成
 
 - `portable-python-vscode/setup.command`: セットアップ本体。Python（python-build-standalone）、
-  pip ライブラリ、VS Code、拡張機能、HackGen フォント、`launch-vscode.app` を用意する。
+  pip ライブラリ、VS Code、拡張機能、HackGen フォント、`VS Code Python.app` を用意し、Dock に置く。
   完了時に `config/` を自分で削除する。
 - `portable-python-vscode/launch-vscode.command`: VS Code の起動スクリプト。
-- `portable-python-vscode/launch-vscode.app`: `setup.command` が `osacompile` で生成する起動用アプリ
+- `portable-python-vscode/VS Code Python.app`: `setup.command` が `osacompile` で生成する起動用アプリ
   （`.gitignore` 済み）。中身は `launch-vscode.command` を `do shell script` で呼ぶだけ。
 - `portable-python-vscode/config/settings.json`: VS Code のユーザー設定の元。
   `vscode/data/user-data/User/settings.json` にコピーされる。
@@ -40,11 +40,16 @@ Windows 版に載せている。
   - ターミナル（`terminal.integrated.fontFamily`）は **Menlo**。ターミナルは罫線を半角 1 マスとして
     扱うので、HackGen だと表示が崩れる。指定しないと `editor.fontFamily` が使われるので、必ず指定する。
   - HackGen は v2.10.0 の配布 zip から `HackGen-Regular.ttf` と `HackGen-Bold.ttf` だけを取り出す。
-- **起動の流れ**: `launch-vscode.app` → `launch-vscode.command` →
+- **起動の流れ**: `VS Code Python.app` → `launch-vscode.command` →
   `open -a ... --env VSCODE_PORTABLE=... --args --locale=ja --disable-workspace-trust workspace`
   - `open` で起動すると VS Code がターミナルから切り離される（ターミナルを閉じても終了しない）。
   - `open` で起動したアプリには環境変数が引き継がれないので、`--env` で渡す。
-  - `launch-vscode.app` はその Mac の上で作るので quarantine の印が付かず、Gatekeeper の警告が出ない。
+  - `VS Code Python.app` はその Mac の上で作るので quarantine の印が付かず、Gatekeeper の警告が出ない。
+    ファイル名が Finder や Dock に表示される名前になる（以前は `launch-vscode.app` だった。
+    `setup.command` は古い名前のアプリを消す）。
+  - アプリ自体はフォルダの外へ移せない（`path to me` で隣の `launch-vscode.command` を探すため）。
+    `setup.command` が Dock の `persistent-apps` に追加して `killall Dock` で反映させる。
+    既に置いてあれば追加しない（Dock は場所を `file://` の URL で覚えることがあるので、パスに戻して比べる）。
   - Mac では ✕ でウインドウを閉じてもアプリは終了しない（終了は Cmd + Q）。動いている VS Code に
     `open -a ... --args` を送っても引数は無視され、空のウインドウが開くだけになる。そこで
     `launch-vscode.command` は、このフォルダの VS Code が動いているときは付属の `code` コマンドで

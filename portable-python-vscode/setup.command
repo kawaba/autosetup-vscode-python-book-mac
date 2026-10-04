@@ -334,15 +334,18 @@ done
 echo ""
 
 # ============================================================
-# 8. 起動用アプリ (launch-vscode.app) の作成
+# 8. 起動用アプリ (VS Code Python.app) の作成
 # ============================================================
 # launch-vscode.command はダブルクリックするとターミナルが開き、起動後もウインドウが残る。
 # AppleScript で作ったアプリから launch-vscode.command を呼べば、ターミナルは開かない。
 # このアプリはこの Mac の上で作るので「インターネットから取得した」印が付かず、
 # Gatekeeper の警告も出ない。作れなかった場合は launch-vscode.command を使えばよい。
-echo -e "${GREEN}起動用アプリ (launch-vscode.app) を作成中...${NC}"
+echo -e "${GREEN}起動用アプリ (VS Code Python.app) を作成中...${NC}"
 
-LAUNCHER_APP="$SCRIPT_DIR/launch-vscode.app"
+# アプリのファイル名が、Finder や Dock に表示される名前になる
+LAUNCHER_APP="$SCRIPT_DIR/VS Code Python.app"
+# 以前の版のスクリプトが作った起動用アプリ (名前を変えたので消す)
+rm -rf "$SCRIPT_DIR/launch-vscode.app"
 
 # set -e は「if ! 関数」の中では効かないので、失敗は 1 つずつ return 1 で返す
 create_launcher_app() {
@@ -368,10 +371,10 @@ create_launcher_app() {
 }
 
 if create_launcher_app; then
-    echo -e "  ${GREEN}launch-vscode.app の作成完了${NC}"
+    echo -e "  ${GREEN}VS Code Python.app の作成完了${NC}"
 else
     rm -rf "$LAUNCHER_APP"
-    echo -e "  ${YELLOW}警告: launch-vscode.app を作成できませんでした。launch-vscode.command で起動してください${NC}"
+    echo -e "  ${YELLOW}警告: VS Code Python.app を作成できませんでした。launch-vscode.command で起動してください${NC}"
 fi
 
 echo ""
@@ -450,6 +453,61 @@ fi
 echo ""
 
 # ============================================================
+# 10. 起動用アプリを Dock に置く
+# ============================================================
+# Dock の設定 (com.apple.dock の persistent-apps) に追加して、Dock を再起動する。
+# 管理者権限は要らない。既に置いてあれば何もしない (2 回実行しても 2 つにならない)。
+# 学校の Mac などで Dock が管理されているときは、追加できなかったり、ログアウトで
+# 元に戻ったりする。失敗してもセットアップは続ける。
+echo -e "${GREEN}VS Code Python を Dock に置いています...${NC}"
+
+# Dock に置いてあれば 0 を返す。
+# Dock は場所を file:// の URL (日本語や空白は %xx) で覚えることがあるので、パスに戻して比べる。
+launcher_in_dock() {
+    defaults export com.apple.dock - 2>/dev/null | "$PYTHON_BIN" -c '
+import plistlib, sys, urllib.parse
+target = sys.argv[1].rstrip("/")
+try:
+    apps = plistlib.loads(sys.stdin.buffer.read()).get("persistent-apps", [])
+except Exception:
+    sys.exit(1)
+for app in apps:
+    url = app.get("tile-data", {}).get("file-data", {}).get("_CFURLString", "")
+    if url.startswith("file://"):
+        url = urllib.parse.unquote(urllib.parse.urlparse(url).path)
+    if url.rstrip("/") == target:
+        sys.exit(0)
+sys.exit(1)
+' "$LAUNCHER_APP"
+}
+
+# set -e は「if ! 関数」の中では効かないので、失敗は 1 つずつ return 1 で返す
+add_launcher_to_dock() {
+    local path_xml
+
+    [ -d "$LAUNCHER_APP" ] || return 1
+    if launcher_in_dock; then
+        echo -e "  ${YELLOW}★ 既に Dock にあります。スキップします。${NC}"
+        return 0
+    fi
+
+    # パスに & < > が含まれていても壊れないように、XML 用に置き換える
+    path_xml=$(printf '%s' "$LAUNCHER_APP" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')
+    defaults write com.apple.dock persistent-apps -array-add \
+        "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>$path_xml</string><key>_CFURLStringType</key><integer>0</integer></dict></dict><key>tile-type</key><string>file-tile</string></dict>" \
+        || return 1
+    # Dock を再起動して反映させる (Dock が一瞬消えて、また表示される)
+    killall Dock || return 1
+    echo -e "  ${GREEN}Dock に置きました${NC}"
+}
+
+if ! add_launcher_to_dock; then
+    echo -e "  ${YELLOW}警告: Dock に置けませんでした。VS Code Python.app を Dock にドラッグしてください${NC}"
+fi
+
+echo ""
+
+# ============================================================
 # 完了メッセージ
 # ============================================================
 echo -e "${CYAN}============================================================${NC}"
@@ -458,7 +516,7 @@ echo -e "${CYAN}============================================================${NC
 echo ""
 echo -e "${WHITE}次の手順で起動してください:${NC}"
 if [ -d "$LAUNCHER_APP" ]; then
-    echo -e "  ${YELLOW}1. launch-vscode.app をダブルクリック${NC}"
+    echo -e "  ${YELLOW}1. Dock (または このフォルダ) の VS Code Python をクリック${NC}"
 else
     echo -e "  ${YELLOW}1. launch-vscode.command をダブルクリック${NC}"
 fi
